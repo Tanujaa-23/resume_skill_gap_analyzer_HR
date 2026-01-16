@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Analysis Result - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-line me-2"></i>Skill Gap Analysis</h2>
+    <div>
+        <a href="{% url 'export_analysis' analysis.id 'pdf' %}" class="btn btn-outline-danger me-2">
+            <i class="fas fa-file-pdf me-1"></i>PDF
+        </a>
+        <a href="{% url 'export_analysis' analysis.id 'json' %}" class="btn btn-outline-info">
+            <i class="fas fa-file-code me-1"></i>JSON
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ analysis.match_score }}%</h3>
+                <p class="mb-0">Match Score</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ analysis.gap_percentage }}%</h3>
+                <p class="mb-0">Skill Gap</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-{% if analysis.readiness_level == 'HIGHLY_COMPATIBLE' %}success{% elif analysis.readiness_level == 'JOB_READY' %}info{% elif analysis.readiness_level == 'INTERMEDIATE' %}warning{% else %}danger{% endif %} text-white">
+            <div class="card-body text-center">
+                <h6>{{ analysis.get_readiness_level_display }}</h6>
+                <p class="mb-0">Readiness Level</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h6>{{ matched_skills|length }}</h6>
+                <p class="mb-0">Skills Matched</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-briefcase me-2"></i>Job Details</h5>
+    </div>
+    <div class="card-body">
+        <h6>{{ analysis.job.title }}</h6>
+        <p>{{ analysis.job.description }}</p>
+        <p><strong>Posted by:</strong> {{ analysis.job.hr.get_full_name|default:analysis.job.hr.username }}</p>
+        <p><strong>Date:</strong> {{ analysis.job.created_at|date:"M d, Y" }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-check-circle me-2"></i>Matched Skills ({{ matched_skills|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if matched_skills %}
+                    {% for skill in matched_skills %}
+                        <span class="badge bg-success me-2 mb-2">{{ skill }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No matching skills found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="fas fa-times-circle me-2"></i>Missing Skills ({{ missing_skills|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if missing_skills %}
+                    {% for skill in missing_skills %}
+                        <span class="badge bg-danger me-2 mb-2">{{ skill }}</span>
+                    {% endfor %}
+                {% elif matched_skills %}
+                    <p class="text-success">Congratulations! You have all required skills.</p>
+                {% else %}
+                    <p class="text-warning">⚠️ No skills could be extracted. Please ensure your resume includes technical skills.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if suggestions %}
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5><i class="fas fa-lightbulb me-2"></i>Improvement Suggestions</h5>
+    </div>
+    <div class="card-body">
+        {% for suggestion in suggestions %}
+            <div class="alert alert-info">
+                <i class="fas fa-arrow-right me-2"></i>{{ suggestion }}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="text-center mt-4">
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+{% endblock %}

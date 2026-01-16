@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+
+{% block title %}Resume History - Resume Analyzer{% endblock %}
+
+{% block content %}
+<style>
+    /* Ensure dropdown menu is visible and not cut off */
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        z-index: 9999 !important;
+        min-width: 280px;
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: white;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.3) !important;
+        padding: 0.5rem 0;
+        margin-top: 5px;
+    }
+    
+    .dropdown-menu.show {
+        display: block !important;
+    }
+    
+    .btn-group {
+        position: relative;
+    }
+    
+    .dropdown-item {
+        padding: 0.75rem 1.25rem;
+        display: block;
+        width: 100%;
+        clear: both;
+        font-weight: 500;
+        color: #212529;
+        text-align: inherit;
+        text-decoration: none;
+        white-space: nowrap;
+        background-color: transparent;
+        border: 0;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .dropdown-item i {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .dropdown-header {
+        padding: 0.75rem 1.25rem;
+        margin-bottom: 0;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #007bff;
+        text-transform: uppercase;
+        background-color: #f8f9fa;
+    }
+    
+    .dropdown-divider {
+        height: 0;
+        margin: 0.5rem 0;
+        overflow: hidden;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .dropdown-item-text {
+        padding: 0.75rem 1.25rem;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Ensure table doesn't hide dropdown */
+    .card {
+        overflow: visible !important;
+    }
+    
+    .card-body {
+        overflow: visible !important;
+    }
+    
+    table {
+        overflow: visible !important;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4"></div>
+    <h2><i class="fas fa-history me-2"></i>Resume History</h2>
+    <a href="{% url 'upload_resume' %}" class="btn btn-primary">
+        <i class="fas fa-upload me-2"></i>Upload New Resume
+    </a>
+</div>
+
+{% if page_obj %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>File Name</th>
+                            <th>Upload Date</th>
+                            <th>File Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for resume in page_obj %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-file-alt me-2"></i>
+                                    {{ resume.resume_file.name|truncatechars:40 }}
+                                </td>
+                                <td>{{ resume.uploaded_at|date:"M d, Y H:i" }}</td>
+                                <td>{{ resume.resume_file.size|filesizeformat }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 120px; font-weight: 500;">
+                                            <i class="fas fa-cog me-2"></i>Actions
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><h6 class="dropdown-header">Analyze Against Job</h6></li>
+                                            {% for job in jobs %}
+                                                <li><a class="dropdown-item" href="{% url 'analyze_resume' resume.id job.id %}">
+                                                    <i class="fas fa-chart-line me-2"></i>{{ job.title|truncatechars:30 }}
+                                                </a></li>
+                                            {% empty %}
+                                                <li><span class="dropdown-item-text text-muted">No jobs available</span></li>
+                                            {% endfor %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item" href="{{ resume.resume_file.url }}" target="_blank">
+                                                <i class="fas fa-download me-2"></i>Download Resume
+                                            </a></li>
+                                            <li><a class="dropdown-item text-danger" href="{% url 'delete_resume' resume.id %}" onclick="return confirm('Are you sure you want to delete this resume? This action cannot be undone.');">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Resume pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-file-alt fa-4x text-muted mb-4"></i>
+            <h4>No Resumes Uploaded</h4>
+            <p class="text-muted">Upload your first resume to get started with skill gap analysis.</p>
+            <a href="{% url 'upload_resume' %}" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Upload Resume
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+    
+    console.log('=== Dropdown Script Loading ===');
+    
+    function initDropdowns() {
+        console.log('Initializing dropdowns...');
+        
+        // Get all dropdown buttons
+        const buttons = document.querySelectorAll('.dropdown-toggle');
+        console.log('Found buttons:', buttons.length);
+        
+        if (buttons.length === 0) {
+            console.error('No dropdown buttons found!');
+            return;
+        }
+        
+        buttons.forEach(function(button, index) {
+            console.log('Setting up button', index + 1);
+            
+            // Remove old listeners by cloning
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Button clicked!');
+                
+                const menu = this.nextElementSibling;
+                console.log('Menu element:', menu);
+                
+                if (!menu) {
+                    console.error('No menu found!');
+                    return;
+                }
+                
+                // Close all other menus
+                document.querySelectorAll('.dropdown-menu').forEach(function(m) {
+                    if (m !== menu) {
+                        m.classList.remove('show');
+                        console.log('Closed other menu');
+                    }
+                });
+                
+                // Toggle this menu
+                const isShown = menu.classList.contains('show');
+                if (isShown) {
+                    menu.classList.remove('show');
+                    console.log('Menu hidden');
+                } else {
+                    menu.classList.add('show');
+                    console.log('Menu shown');
+                }
+            });
+        });
+        
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.btn-group')) {
+                const menus = document.querySelectorAll('.dropdown-menu.show');
+                if (menus.length > 0) {
+                    console.log('Closing menus from outside click');
+                    menus.forEach(function(menu) {
+                        menu.classList.remove('show');
+                    });
+                }
+            }
+        });
+        
+        console.log('Dropdown initialization complete');
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDropdowns);
+    } else {
+        initDropdowns();
+    }
+})();
+</script>
+{% endblock %}""
