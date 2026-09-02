@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Resumes - HR Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-file-alt"></i> All Uploaded Resumes</h2>
+            <p class="text-muted">View and analyze all candidate resumes</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'hr_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-file-pdf"></i> Total Resumes</h5>
+                    <h2>{{ total_resumes }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-briefcase"></i> Your Jobs</h5>
+                    <h2>{{ jobs.count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users"></i> Candidates</h5>
+                    <h2>{{ page_obj.paginator.count }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by name, email, username, or resume content..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumes Table -->
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0"><i class="fas fa-table"></i> Resume Database</h5>
+        </div>
+        <div class="card-body">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Candidate Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Resume File</th>
+                            <th>Uploaded Date</th>
+                            <th>Skills Extracted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for resume in page_obj %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ resume.user.get_full_name|default:resume.user.username }}</strong>
+                            </td>
+                            <td>{{ resume.user.username }}</td>
+                            <td>{{ resume.user.email }}</td>
+                            <td>
+                                <a href="{{ resume.resume_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-download"></i> View Resume
+                                </a>
+                            </td>
+                            <td>{{ resume.uploaded_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                {% if resume.extracted_text %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> Yes
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-times"></i> No
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <!-- Quick Analyze Button -->
+                                <button type="button" class="btn btn-sm btn-success" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#analyzeModal{{ resume.id }}">
+                                    <i class="fas fa-chart-line"></i> Analyze
+                                </button>
+                                
+                                <!-- View Analyses -->
+                                {% if resume.analyses.all %}
+                                <a href="{% url 'candidate_detail' resume.analyses.first.id %}" 
+                                   class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {% endif %}
+                                
+                                <!-- Analyze Modal -->
+                                <div class="modal fade" id="analyzeModal{{ resume.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Analyze Resume</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form method="post" action="{% url 'quick_analyze' resume.id %}">
+                                                {% csrf_token %}
+                                                <div class="modal-body">
+                                                    <p>Select a job to analyze this resume against:</p>
+                                                    <select name="job_id" class="form-select" required>
+                                                        <option value="">-- Select Job --</option>
+                                                        {% for job in jobs %}
+                                                        <option value="{{ job.id }}">{{ job.title }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    
+                                                    <div class="mt-3">
+                                                        <strong>Candidate:</strong> {{ resume.user.get_full_name|default:resume.user.username }}
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fas fa-chart-line"></i> Analyze
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No resumes found. 
+                {% if search_query %}
+                <a href="{% url 'all_resumes' %}">Clear search</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .table th {
+        white-space: nowrap;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .badge {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
